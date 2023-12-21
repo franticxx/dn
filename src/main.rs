@@ -1,11 +1,10 @@
+use downloader::download::DownloadManager;
+
 mod cli;
-mod download;
-mod parse;
-mod utils;
+mod downloader;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    download::run().await?;
-
+    DownloadManager::run().await?;
     Ok(())
 }
