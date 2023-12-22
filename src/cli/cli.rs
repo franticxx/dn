@@ -1,5 +1,9 @@
 use clap::Parser;
-use std::{io, path::Path, process};
+use std::{
+    io,
+    path::{Path, PathBuf},
+    process,
+};
 
 #[derive(Debug, Parser)]
 #[command(name = "dn")]
@@ -24,12 +28,18 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn save_path(&self) -> &Path {
-        let output = match &self.output {
-            Some(output) => output,
-            None => self.filename(),
-        };
-        Path::new(output)
+    pub fn save_path(&self) -> PathBuf {
+        match &self.output {
+            Some(output) => {
+                let output = Path::new(output);
+                if output.is_dir() {
+                    output.join(self.filename())
+                } else {
+                    output.to_path_buf()
+                }
+            }
+            None => Path::new(self.filename()).to_path_buf(),
+        }
     }
 
     pub fn filename(&self) -> &str {
