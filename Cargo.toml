@@ -1,6 +1,6 @@
 [package]
 name = "dn"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "这是一个使用 Rust 编写的多线程下载工具，支持断点下载和重试功能。通过该工具，你可以高效地下载文件，充分利用多线程提升下载速度，同时在下载过程中支持断点续传，保证下载的稳定性和可靠性。"
 license = "MIT"
