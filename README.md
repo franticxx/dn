@@ -25,7 +25,7 @@ cargo install dn
 ```bash
 dn [OPTIONS] <URL>
 ```
-![](./imgs/example.png)
+![](./imgs/example.jpg)
 
 ### 参数说明
 
