@@ -25,23 +25,40 @@ cargo install dn
 ```bash
 dn [OPTIONS] <URL>
 ```
+![](./imgs/example.png)
 
 ### 参数说明
 
 - `<URL>`: 要下载文件的 URL。
 - `-o, --output <OUTPUT>`: 指定输出文件路径。
+- `-H, --header <HEADER>`: header 路径，自动检测并导入当前路径下的 header, header.dn, header.txt 文件
+- `-A, --user-agent <USER_AGENT>`: 自定义 User-Agent，优先级大于 header
 - `-t, --thread-count <THREAD_COUNT>`: 指定线程数量，默认为 8。
 - `-r, --retry <RETRY>`: 指定下载失败时的重试次数，默认为 3。
 - `-h, --help`: 显示帮助信息。
 - `-V, --version`: 显示版本信息。
 
 ## 示例
+header.dn
+```
+Accept: text/html,application/xhtml+xml
+Accept-Encoding: gzip, deflate, br
+Accept-Language: zh-CN,zh;q=0.9
+Cache-Control: max-age=0
+Cookie: cookie
+Referer: https://cn.bing.com/search?q=rust
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+```
 
+运行
 ```bash
 dn https://example.com/file.zip -o output_file.zip -t 12 -r 5
 ```
 
-这个命令将以 12 个线程下载 `https://example.com/file.zip` 文件，输出文件保存为 `output_file.zip`，并在下载失败时进行最多 5 次重试。
+这个命令将自动导入 `header.dn` 并以 12 个线程下载 `https://example.com/file.zip` 文件，输出文件保存为 `output_file.zip`，并在下载失败时进行最多 5 次重试。
+
+## 更新说明
+- `0.1.3` 新增自定义请求头
 
 ## 贡献
 

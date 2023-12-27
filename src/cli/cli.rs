@@ -18,6 +18,14 @@ pub struct Args {
     #[arg(short)]
     pub output: Option<String>,
 
+    /// Header file path, default loading: header, header.dn ,header.txt
+    #[arg(short('H'), long)]
+    pub header: Option<String>,
+
+    /// User-Agent
+    #[arg(short('A'), long)]
+    pub user_agent: Option<String>,
+
     /// Thread num
     #[arg(short, long, default_value_t = 8)]
     pub thread_count: usize,
