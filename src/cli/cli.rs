@@ -51,11 +51,18 @@ impl Args {
     }
 
     pub fn filename(&self) -> &str {
-        self.url
-            .split('/')
-            .last()
-            .and_then(|i| i.split('?').next())
-            .unwrap()
+        match &self.output {
+            Some(output) => {
+                let name = Path::new(output);
+                name.file_name().unwrap().to_str().unwrap()
+            }
+            None => self
+                .url
+                .split('/')
+                .last()
+                .and_then(|i| i.split('?').next())
+                .unwrap(),
+        }
     }
 
     pub fn check_exists(self) -> Self {
