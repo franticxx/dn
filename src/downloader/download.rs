@@ -2,9 +2,7 @@ use anyhow::Result;
 use futures::{future::join_all, StreamExt};
 use indicatif::HumanBytes;
 use reqwest::header::{ACCEPT_RANGES, CONTENT_LENGTH, CONTENT_RANGE};
-use std::env::temp_dir;
-use std::fs::{create_dir_all, remove_dir_all};
-use std::io::Write;
+use std::fs::create_dir_all;
 use std::time::Instant;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
@@ -13,7 +11,7 @@ use crate::downloader::block::Block;
 use crate::downloader::status::{DnStatus, M};
 use crate::downloader::utils::tools::{create_bar, create_client};
 
-use super::status::{ARGS, TEMP_DIR};
+use super::status::ARGS;
 
 pub struct DownloadManager;
 
@@ -60,68 +58,40 @@ impl DownloadManager {
         Ok(())
     }
 
-    /// 合并块
-    async fn merge() -> Result<()> {
-        println!("正在合并文件");
-        let now = Instant::now();
-        let mut paths = std::fs::read_dir(TEMP_DIR.as_path())?
-            .filter(|i| {
-                i.as_ref()
-                    .unwrap()
-                    .file_name()
-                    .to_str()
-                    .unwrap()
-                    .contains(".dn")
-            })
-            .filter_map(|res| res.ok())
-            .collect::<Vec<_>>();
-        paths.sort_by_key(|file| {
-            file.file_name()
-                .to_str()
-                .and_then(|i| i.split(".dn").last())
-                .unwrap()
-                .parse::<u8>()
-                .unwrap()
-        });
-        let mut file = std::fs::File::create(ARGS.save_path()).unwrap();
-        let mut contents = Vec::new();
-        for p in paths {
-            let content = std::fs::read(p.path()).unwrap();
-            contents.extend(content);
-        }
-        file.write_all(&contents).unwrap();
-        remove_dir_all(TEMP_DIR.as_path()).unwrap();
-        println!("文件合并完成，耗时: {:.2?}", now.elapsed());
-        Ok(())
-    }
-
-    fn init() -> Result<()> {
+    fn init(filesize: Option<u64>) -> Result<()> {
         if let Some(path) = ARGS.save_path().parent() {
             create_dir_all(path)?;
         }
-        create_dir_all(TEMP_DIR.as_path())?;
+
+        if ARGS.save_path().is_file() {
+            return Ok(());
+        }
+
+        if let Some(filesize) = filesize {
+            let file = std::fs::File::create(ARGS.save_path())?;
+            file.set_len(filesize)?;
+        }
         Ok(())
     }
 
     pub async fn run() -> Result<()> {
         let now = Instant::now();
 
-        Self::init()?;
+        let (is_resumed, file_size) = Self::get_file_size().await?;
+
+        Self::init(file_size)?;
         let mut dn_status: DnStatus = DnStatus::load_or_create();
 
         if !dn_status.downloaded() {
-            let (is_resumed, file_size) = Self::get_file_size().await?;
             dn_status.info.file_size = file_size;
 
-            if !is_resumed {
+            if !is_resumed || file_size.is_none() {
                 println!("此文件不支持多线程下载");
                 Self::download_one(file_size).await?;
             } else {
                 let file_size = file_size.unwrap();
                 println!("文件大小：{}", HumanBytes(file_size));
 
-                let temp_path = temp_dir().join(ARGS.filename());
-                create_dir_all(&temp_path)?;
                 let block_size = file_size / ARGS.thread_count as u64;
 
                 let mut handles = Vec::with_capacity(ARGS.thread_count + 1);
@@ -135,17 +105,19 @@ impl DownloadManager {
                     let size = end - start + 1;
 
                     let bid = format!("dn{i:02}");
-                    let mut block = Block::new(bid.clone(), start, end, size, ARGS.retry);
+                    let block = Block::new(bid.clone(), start, end, size, ARGS.retry);
                     dn_status.blocks.insert(bid, block.clone());
-
-                    handles.push(tokio::spawn(async move { block.download().await }))
                 }
 
-                dn_status.save()?;
+                dn_status.save().unwrap();
+                dn_status.set_block_status_diff().unwrap();
+
+                for (_, block) in dn_status.blocks {
+                    handles.push(tokio::spawn(async move { block.clone().download().await }))
+                }
 
                 join_all(handles).await;
                 M.clear().unwrap();
-                Self::merge().await?;
             }
             println!("下载完成! 总耗时: {:.2?}", now.elapsed());
         } else {
@@ -156,15 +128,18 @@ impl DownloadManager {
             );
             let mut handles = Vec::with_capacity(ARGS.thread_count);
 
+            dn_status.set_block_status_diff().unwrap();
+
             for (_, mut block) in dn_status.blocks {
                 handles.push(tokio::spawn(async move { block.download().await }))
             }
 
             join_all(handles).await;
-            Self::merge().await?;
             M.clear().unwrap();
             println!("下载完成! 总耗时: {:.2?}", now.elapsed());
         }
+
+        std::fs::remove_file(ARGS.status_file()).unwrap();
 
         Ok(())
     }
