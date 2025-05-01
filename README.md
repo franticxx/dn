@@ -59,6 +59,7 @@ dn https://example.com/file.zip -o output_file.zip -t 12 -r 5
 
 ## 更新说明
 - `0.1.3` 新增自定义请求头
+- `0.1.4` 将缓存移到输出目录，并改用单文件缓存，且将状态记录文件从sled DB改为自定义格式。
 
 ## 贡献
 
