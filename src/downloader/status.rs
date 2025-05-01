@@ -1,5 +1,5 @@
 use super::block::Block;
-use crate::{cli::cli::Args, downloader::parse::DownloadStatus};
+use crate::{cli::args::Args, downloader::parse::DownloadStatus};
 use anyhow::Result;
 use clap::Parser;
 use indicatif::MultiProgress;
@@ -17,7 +17,7 @@ pub static ARGS: Lazy<Args> = Lazy::new(|| {
     args.check_exists()
 });
 pub static TEMP_FILE: Lazy<PathBuf> = Lazy::new(|| ARGS.status_file());
-pub static M: Lazy<MultiProgress> = Lazy::new(|| MultiProgress::new());
+pub static M: Lazy<MultiProgress> = Lazy::new(MultiProgress::new);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DnInfo {

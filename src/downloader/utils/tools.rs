@@ -61,7 +61,7 @@ pub fn load_header(header_path: Option<&String>) -> Result<HeaderMap> {
     };
 
     match header_path {
-        Some(header_path) => load(&header_path),
+        Some(header_path) => load(header_path),
         None => {
             load("header");
             load("header.dn");

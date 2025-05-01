@@ -11,7 +11,7 @@ pub enum DownloadStatus {
 }
 
 impl DownloadStatus {
-    pub fn update_status(self: &mut Self, progress: u64) {
+    pub fn update_status(&mut self, progress: u64) {
         match self {
             DownloadStatus::Started => *self = DownloadStatus::Progress(progress),
             DownloadStatus::Progress(p) => *self = DownloadStatus::Progress(*p + progress),
