@@ -39,11 +39,11 @@ impl Args {
     pub fn save_path(&self) -> PathBuf {
         match &self.output {
             Some(output) => {
-                let output = Path::new(output);
-                if output.is_dir() {
-                    output.join(self.filename())
+                let output_path = Path::new(output);
+                if output.ends_with("/") || output.ends_with("\\") {
+                    output_path.join(self.filename())
                 } else {
-                    output.to_path_buf()
+                    output_path.to_path_buf()
                 }
             }
             None => Path::new(self.filename()).to_path_buf(),
@@ -51,30 +51,43 @@ impl Args {
     }
 
     pub fn filename(&self) -> &str {
+        let url_name = self
+            .url
+            .split('/')
+            .last()
+            .and_then(|i| i.split('?').next())
+            .unwrap();
         match &self.output {
             Some(output) => {
-                let name = Path::new(output);
-                name.file_name().unwrap().to_str().unwrap()
+                if output.ends_with("/") || output.ends_with("\\") {
+                    url_name
+                } else {
+                    Path::new(output).file_name().unwrap().to_str().unwrap()
+                }
             }
-            None => self
-                .url
-                .split('/')
-                .last()
-                .and_then(|i| i.split('?').next())
-                .unwrap(),
+            None => url_name,
         }
     }
 
     pub fn check_exists(self) -> Self {
+        let tmp_file = self.status_file();
         let path = self.save_path();
-        if path.exists() {
+        if path.exists() && !tmp_file.exists() {
             println!("文件已存在, 是否继续下载? y/n: ");
             let mut s = String::new();
             io::stdin().read_line(&mut s).unwrap();
             if !(s.trim().is_empty() || s.trim().eq_ignore_ascii_case("y")) {
                 process::exit(0)
             }
+            std::fs::remove_file(&path).unwrap();
         }
         self
+    }
+
+    pub fn status_file(&self) -> PathBuf {
+        self.save_path()
+            .parent()
+            .unwrap()
+            .join(format!("{}.dn_status", self.filename()))
     }
 }
